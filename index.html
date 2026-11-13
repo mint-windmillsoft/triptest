@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>상하이 여행 일정</title>
+<style>
+:root{
+  --bg:#f6f4f0; --card:#fff; --ink:#1d1d1f; --sub:#6b6b70; --line:#e6e2da;
+  --accent:#d6453d; --accent-soft:#fbe9e7; --ok:#2f8f5b; --chip:#f0ede7;
+  --shadow:0 1px 3px rgba(0,0,0,.06),0 4px 14px rgba(0,0,0,.04);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#141416;--card:#1f1f22;--ink:#f2f2f4;--sub:#9b9ba2;--line:#2e2e33;
+    --accent:#ff6b5f;--accent-soft:#3a2220;--ok:#4cc184;--chip:#2a2a2e;--shadow:none}
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","PingFang SC",sans-serif;
+  font-size:16px;line-height:1.45}
+button,input,textarea,select{font:inherit;color:inherit}
+button{cursor:pointer}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px 110px}
+header{padding:22px 0 10px}
+header h1{margin:0;font-size:24px;letter-spacing:-.02em}
+header .meta{color:var(--sub);font-size:14px;margin-top:2px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.sync{display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:2px 9px;border-radius:99px;background:var(--chip)}
+.sync i{width:7px;height:7px;border-radius:50%;background:var(--sub);display:inline-block}
+.sync.on i{background:var(--ok)} .sync.off i{background:#e0a100}
+.daynav{position:sticky;top:0;z-index:5;background:var(--bg);display:flex;gap:6px;overflow-x:auto;padding:8px 0 10px;scrollbar-width:none}
+.daynav::-webkit-scrollbar{display:none}
+.daynav button{flex:0 0 auto;border:1px solid var(--line);background:var(--card);border-radius:99px;padding:6px 13px;font-size:14px}
+.daynav button.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+section.day{margin:6px 0 22px}
+.dayhead{display:flex;align-items:baseline;justify-content:space-between;margin:8px 2px 8px}
+.dayhead h2{margin:0;font-size:18px}
+.dayhead small{color:var(--sub);font-size:13px}
+.card{background:var(--card);border-radius:14px;box-shadow:var(--shadow);border:1px solid var(--line)}
+.item{display:flex;gap:12px;padding:13px 14px;margin-bottom:8px}
+.item .time{flex:0 0 46px;font-weight:600;font-size:14px;color:var(--accent);padding-top:1px}
+.item .body{flex:1;min-width:0}
+.item .title{font-weight:600}
+.item .cn{font-size:14px;color:var(--sub);margin-top:1px;word-break:break-all}
+.item .memo{font-size:14px;margin-top:5px;white-space:pre-wrap;word-break:break-word}
+.item .acts{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.pill{border:1px solid var(--line);background:var(--chip);border-radius:99px;padding:4px 10px;font-size:13px;text-decoration:none;color:var(--ink);display:inline-flex;align-items:center;gap:4px}
+.pill.map{background:var(--accent-soft);border-color:transparent;color:var(--accent);font-weight:600}
+.cost{font-size:13px;color:var(--sub)}
+.edit{border:0;background:none;color:var(--sub);font-size:13px;padding:0 0 0 4px;align-self:flex-start}
+.add{width:100%;border:1.5px dashed var(--line);background:transparent;border-radius:14px;padding:11px;color:var(--sub);font-size:15px}
+.empty{color:var(--sub);font-size:14px;padding:4px 4px 10px}
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--card);border-top:1px solid var(--line);
+  display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom)}
+.tabs button{flex:1;max-width:160px;border:0;background:none;padding:10px 0 12px;font-size:13px;color:var(--sub);display:flex;flex-direction:column;align-items:center;gap:2px}
+.tabs button b{font-size:19px;font-weight:400;line-height:1}
+.tabs button.on{color:var(--accent);font-weight:600}
+.panel{display:none}.panel.on{display:block}
+.row{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .grow{flex:1;min-width:0;word-break:break-word}
+.row .x{border:0;background:none;color:var(--sub);font-size:18px;padding:0 4px}
+.check{width:22px;height:22px;border-radius:6px;border:2px solid var(--line);flex:0 0 22px;display:grid;place-items:center;background:none;padding:0}
+.check.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.done-text{text-decoration:line-through;color:var(--sub)}
+.addrow{display:flex;gap:8px;margin-top:10px}
+.addrow input,.addrow select{flex:1;min-width:0;border:1px solid var(--line);background:var(--card);border-radius:10px;padding:10px 12px}
+.addrow select{flex:0 0 auto}
+.addrow button,.btn{border:0;background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 16px;font-weight:600}
+.btn.ghost{background:var(--chip);color:var(--ink)}
+.btn.danger{background:transparent;color:var(--accent);padding-left:0}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px}
+.stat .card{padding:13px 14px}
+.stat small{color:var(--sub);font-size:13px;display:block}
+.stat strong{font-size:20px}
+h3{font-size:15px;margin:20px 2px 8px;color:var(--sub);font-weight:600}
+textarea.notes{width:100%;min-height:55vh;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:14px;resize:vertical;line-height:1.6}
+.hint{color:var(--sub);font-size:13px;margin:6px 2px}
+/* sheet */
+.dim{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:none;align-items:flex-end;justify-content:center}
+.dim.on{display:flex}
+.sheet{background:var(--card);width:100%;max-width:640px;border-radius:18px 18px 0 0;padding:18px 16px calc(18px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto}
+.sheet h2{margin:0 0 12px;font-size:18px}
+.field{margin-bottom:11px}
+.field label{display:block;font-size:13px;color:var(--sub);margin-bottom:4px}
+.field input,.field textarea,.field select{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px}
+.field textarea{min-height:70px;resize:vertical}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 14px}
+.chips button{border:1px solid var(--line);background:var(--chip);border-radius:99px;padding:4px 10px;font-size:13px}
+.sheetacts{display:flex;justify-content:space-between;align-items:center;margin-top:6px;gap:8px}
+/* gate */
+.gate{position:fixed;inset:0;z-index:30;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:16px}
+.gate .card{padding:26px 20px;width:100%;max-width:340px;text-align:center}
+.gate h1{margin:0 0 4px;font-size:22px}
+.gate p{color:var(--sub);margin:0 0 16px;font-size:14px}
+.gate input{width:100%;text-align:center;font-size:22px;letter-spacing:.3em;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:12px;margin-bottom:10px}
+.gate .err{color:var(--accent);font-size:13px;min-height:18px}
+.gate button{width:100%}
+.toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:99px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:40}
+.toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="gate" id="gate">
+  <form class="card" id="gateForm">
+    <h1>🇨🇳 상하이 여행</h1>
+    <p>12월 3일 – 6일 · 암호를 입력하세요</p>
+    <input id="gateInput" type="password" inputmode="numeric" autocomplete="off" autofocus>
+    <div class="err" id="gateErr"></div>
+    <button class="btn" type="submit">들어가기</button>
+  </form>
+</div>
+
+<div class="wrap">
+  <header>
+    <h1>상하이 여행 🥟</h1>
+    <div class="meta">2026.12.3 (목) – 12.6 (일) · 3박 4일 <span class="sync" id="sync"><i></i><span>연결 중…</span></span></div>
+  </header>
+
+  <div class="panel on" id="p-plan">
+    <nav class="daynav" id="daynav"></nav>
+    <div id="days"></div>
+  </div>
+
+  <div class="panel" id="p-budget">
+    <div class="stat">
+      <div class="card"><small>총 예상 경비 (위안)</small><strong id="totCny">¥0</strong></div>
+      <div class="card"><small>원화 환산</small><strong id="totKrw">₩0</strong></div>
+    </div>
+    <div class="hint">환율: 1위안 = <input id="rate" type="number" style="width:70px;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:3px 6px"> 원</div>
+    <h3>일정별 비용</h3>
+    <div class="card" id="dayCosts"></div>
+    <h3>그 외 경비 (항공·숙소·교통 등)</h3>
+    <div class="card" id="expenses"></div>
+    <form class="addrow" id="expForm">
+      <input id="expName" placeholder="항목 (예: 호텔 3박)" required>
+      <input id="expAmt" type="number" step="any" placeholder="금액" style="flex:0 0 90px" required>
+      <select id="expCur"><option value="CNY">위안</option><option value="KRW">원</option></select>
+      <button>추가</button>
+    </form>
+  </div>
+
+  <div class="panel" id="p-check">
+    <div class="card" id="checklist"></div>
+    <form class="addrow" id="chkForm">
+      <input id="chkText" placeholder="준비물 추가" required>
+      <button>추가</button>
+    </form>
+  </div>
+
+  <div class="panel" id="p-notes">
+    <textarea class="notes" id="notes" placeholder="숙소 주소, 항공편, 맛집 후보, 하고 싶은 것… 자유롭게 적어요. (자동 저장)"></textarea>
+  </div>
+</div>
+
+<nav class="tabs" id="tabs">
+  <button class="on" data-p="plan"><b>🗓</b>일정</button>
+  <button data-p="budget"><b>💴</b>예산</button>
+  <button data-p="check"><b>✅</b>준비물</button>
+  <button data-p="notes"><b>📝</b>메모</button>
+</nav>
+
+<div class="dim" id="dim">
+  <form class="sheet" id="sheet">
+    <h2 id="sheetTitle">일정 추가</h2>
+    <div class="chips" id="chips"></div>
+    <div class="two">
+      <div class="field"><label>날짜</label><select id="fDay"></select></div>
+      <div class="field"><label>시간</label><input id="fTime" type="time"></div>
+    </div>
+    <div class="field"><label>장소 / 할 일</label><input id="fTitle" placeholder="예: 와이탄 야경" required></div>
+    <div class="field"><label>중국어 이름 (고덕지도 검색용)</label><input id="fCn" placeholder="예: 外滩" lang="zh"></div>
+    <div class="field"><label>중국어 주소 (선택)</label><input id="fAddr" placeholder="택시 기사에게 보여줄 주소" lang="zh"></div>
+    <div class="field"><label>예상 비용 (위안)</label><input id="fCost" type="number" step="any" placeholder="0"></div>
+    <div class="field"><label>메모</label><textarea id="fMemo" placeholder="예약 번호, 가는 법, 먹을 것…"></textarea></div>
+    <div class="sheetacts">
+      <button type="button" class="btn danger" id="fDel">삭제</button>
+      <span style="display:flex;gap:8px"><button type="button" class="btn ghost" id="fCancel">취소</button><button class="btn">저장</button></span>
+    </div>
+  </form>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+/* ===== Firebase 설정: 콘솔에서 복사한 firebaseConfig 객체를 null 자리에 붙여넣기 ===== */
+const FIREBASE_CONFIG = {
+  projectId: 'shanghai-trip-33659',
+  databaseURL: 'https://shanghai-trip-33659-default-rtdb.asia-southeast1.firebasedatabase.app',
+};
+
+const PASS_HASH = '1xhlmj';           // 암호 해시 (암호 자체는 코드에 넣지 않음)
+const CACHE_KEY = 'shanghai-trip-cache';
+const AUTH_KEY = 'shanghai-trip-auth';
+const DAYS = [
+  {d:'2026-12-03', label:'12/3 (목)'},
+  {d:'2026-12-04', label:'12/4 (금)'},
+  {d:'2026-12-05', label:'12/5 (토)'},
+  {d:'2026-12-06', label:'12/6 (일)'},
+];
+const PLACES = [
+  ['와이탄','外滩'],['동방명주','东方明珠广播电视塔'],['상하이 타워','上海中心大厦'],['예원','豫园'],
+  ['난징동루','南京东路步行街'],['신천지','新天地'],['티엔즈팡','田子坊'],['우캉루','武康路'],
+  ['임시정부청사','大韩民国临时政府旧址'],['주자자오','朱家角古镇'],['디즈니랜드','上海迪士尼乐园'],['푸둥공항','浦东国际机场'],
+];
+const DEFAULT_CHECK = [
+  '여권 (유효기간 6개월 이상)','입국 조건 확인 (무비자 여부·체류 가능 일수)','알리페이 설치 + 해외카드 연동',
+  '위챗 설치 (위챗페이 카드 연동)','로밍 또는 eSIM (홍콩 eSIM이면 구글·카톡 사용 가능)','고덕지도(高德地图) 설치',
+  '파파고 / 번역 앱','숙소 주소 중국어로 캡처','소액 위안 현금','보조배터리 (기내 반입 규정 확인)',
+  '여행자 보험','멀티 어댑터 (중국은 220V, 한국 플러그 대부분 사용 가능)',
+];
+
+const hash = s => { let h = 5381; for (const c of s) h = ((h * 33) ^ c.charCodeAt(0)) >>> 0; return h.toString(36); };
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+const won = n => '₩' + Math.round(n).toLocaleString('ko-KR');
+const yuan = n => '¥' + (Math.round(n * 100) / 100).toLocaleString('ko-KR');
+const amap = s => 'https://uri.amap.com/search?keyword=' + encodeURIComponent(s) + '&city=' + encodeURIComponent('上海') + '&callnative=1';
+
+let S = {items:{}, expenses:{}, checklist:{}, notes:'', rate:195};
+let db = null;
+
+/* ---------- 암호 ---------- */
+function unlock(){ $('gate').remove(); start(); }
+try { if (localStorage.getItem(AUTH_KEY) === PASS_HASH) unlock(); } catch {}
+$('gateForm')?.addEventListener('submit', e => {
+  e.preventDefault();
+  if (hash($('gateInput').value.trim()) === PASS_HASH) {
+    try { localStorage.setItem(AUTH_KEY, PASS_HASH); } catch {}
+    unlock();
+  } else { $('gateErr').textContent = '암호가 맞지 않아요'; $('gateInput').value = ''; }
+});
+
+/* ---------- 저장소 ---------- */
+function loadCache(){ try { const c = JSON.parse(localStorage.getItem(CACHE_KEY)); if (c) S = {...S, ...c}; } catch {} }
+function saveCache(){ try { localStorage.setItem(CACHE_KEY, JSON.stringify(S)); } catch {} }
+
+function setPath(path, val){            // path: 'items/abc' 등
+  if (db) { db.ref('trip/' + path).set(val ?? null).catch(() => toast('저장 실패 – 연결을 확인하세요')); return; }
+  const [k, id] = path.split('/');
+  if (id) { S[k] = {...(S[k] || {})}; if (val == null) delete S[k][id]; else S[k][id] = val; }
+  else S[k] = val;
+  saveCache(); render();
+}
+
+function setSync(state, text){ const el = $('sync'); el.className = 'sync ' + state; el.lastElementChild.textContent = text; }
+
+function start(){
+  loadCache(); render();
+  if (!FIREBASE_CONFIG || !window.firebase) {
+    setSync('off', FIREBASE_CONFIG ? '오프라인 · 저장된 일정 표시 중' : '이 기기에만 저장 중');
+    if (!FIREBASE_CONFIG && !Object.keys(S.checklist || {}).length) seedLocal();
+    return;
+  }
+  firebase.initializeApp(FIREBASE_CONFIG);
+  db = firebase.database();
+  db.ref('.info/connected').on('value', s => s.val() ? setSync('on', '실시간 공유 중') : setSync('off', '오프라인 · 저장된 일정 표시 중'));
+  db.ref('trip').on('value', snap => {
+    const v = snap.val() || {};
+    S = {items:v.items || {}, expenses:v.expenses || {}, checklist:v.checklist || {}, notes:v.notes || '', rate:v.rate || 195};
+    saveCache(); render();
+  });
+  db.ref('trip/seeded').transaction(v => v ? undefined : true).then(r => {
+    if (r.committed) DEFAULT_CHECK.forEach((t, i) => db.ref('trip/checklist/' + uid() + i).set({t, done:false, o:i}));
+  });
+}
+function seedLocal(){ S.checklist = {}; DEFAULT_CHECK.forEach((t, i) => S.checklist[uid() + i] = {t, done:false, o:i}); saveCache(); render(); }
+
+/* ---------- 화면 ---------- */
+const sorted = obj => Object.entries(obj || {}).sort((a, b) => ((a[1].time || '99') + (a[1].o || 0)).localeCompare((b[1].time || '99') + (b[1].o || 0)));
+
+function render(){
+  // 일정
+  $('daynav').innerHTML = DAYS.map((d, i) => `<button data-go="${d.d}">Day ${i + 1} · ${d.label}</button>`).join('');
+  $('days').innerHTML = DAYS.map((d, i) => {
+    const items = sorted(S.items).filter(([, it]) => it.day === d.d);
+    const sum = items.reduce((a, [, it]) => a + (+it.cost || 0), 0);
+    return `<section class="day" id="day-${d.d}">
+      <div class="dayhead"><h2>Day ${i + 1} <span style="font-weight:400;color:var(--sub);font-size:15px">${d.label}</span></h2>${sum ? `<small>${yuan(sum)}</small>` : ''}</div>
+      ${items.length ? '' : '<div class="empty">아직 일정이 없어요</div>'}
+      ${items.map(([id, it]) => `<div class="card item">
+        <div class="time">${esc(it.time || '–')}</div>
+        <div class="body">
+          <div class="title">${esc(it.title)}</div>
+          ${it.cn || it.addr ? `<div class="cn" lang="zh">${esc([it.cn, it.addr].filter(Boolean).join(' · '))}</div>` : ''}
+          ${it.memo ? `<div class="memo">${esc(it.memo)}</div>` : ''}
+          <div class="acts">
+            ${it.cn || it.addr ? `<a class="pill map" href="${amap(it.cn || it.addr)}" target="_blank" rel="noopener">📍 고덕지도</a>
+            <button class="pill" data-copy="${esc(it.addr || it.cn)}">📋 ${it.addr ? '주소' : '중국어'} 복사</button>` : ''}
+            ${+it.cost ? `<span class="cost">💴 ${yuan(+it.cost)}</span>` : ''}
+          </div>
+        </div>
+        <button class="edit" data-edit="${id}">편집</button>
+      </div>`).join('')}
+      <button class="add" data-add="${d.d}">＋ 일정 추가</button>
+    </section>`;
+  }).join('');
+
+  // 예산
+  const rate = +S.rate || 195;
+  if (document.activeElement !== $('rate')) $('rate').value = rate;
+  const toCny = e => e.cur === 'KRW' ? (+e.amt || 0) / rate : (+e.amt || 0);
+  const dayTotals = DAYS.map(d => Object.values(S.items).filter(it => it.day === d.d).reduce((a, it) => a + (+it.cost || 0), 0));
+  const exps = Object.entries(S.expenses || {}).sort((a, b) => (a[1].o || 0) - (b[1].o || 0));
+  const total = dayTotals.reduce((a, b) => a + b, 0) + exps.reduce((a, [, e]) => a + toCny(e), 0);
+  $('totCny').textContent = yuan(total);
+  $('totKrw').textContent = won(total * rate);
+  $('dayCosts').innerHTML = DAYS.map((d, i) => `<div class="row"><span class="grow">Day ${i + 1} · ${d.label}</span><span>${yuan(dayTotals[i])}</span></div>`).join('');
+  $('expenses').innerHTML = exps.length ? exps.map(([id, e]) => `<div class="row"><span class="grow">${esc(e.name)}</span>
+      <span>${e.cur === 'KRW' ? won(+e.amt) : yuan(+e.amt)}</span><button class="x" data-delexp="${id}" aria-label="삭제">×</button></div>`).join('')
+    : '<div class="row"><span class="grow" style="color:var(--sub)">항공권, 숙소 등을 추가해 보세요</span></div>';
+
+  // 준비물
+  const chk = Object.entries(S.checklist || {}).sort((a, b) => (a[1].done - b[1].done) || ((a[1].o || 0) - (b[1].o || 0)));
+  $('checklist').innerHTML = chk.length ? chk.map(([id, c]) => `<div class="row">
+      <button class="check ${c.done ? 'done' : ''}" data-chk="${id}" aria-label="체크">${c.done ? '✓' : ''}</button>
+      <span class="grow ${c.done ? 'done-text' : ''}">${esc(c.t)}</span>
+      <button class="x" data-delchk="${id}" aria-label="삭제">×</button></div>`).join('')
+    : '<div class="row"><span class="grow" style="color:var(--sub)">준비물을 추가해 보세요</span></div>';
+
+  // 메모 (입력 중엔 덮어쓰지 않음)
+  if (document.activeElement !== $('notes')) $('notes').value = S.notes || '';
+}
+
+/* ---------- 이벤트 ---------- */
+$('tabs').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + b.dataset.p));
+  window.scrollTo(0, 0);
+});
+
+document.addEventListener('click', e => {
+  const t = e.target.closest('[data-go],[data-add],[data-edit],[data-copy],[data-chk],[data-delchk],[data-delexp]');
+  if (!t) return;
+  const ds = t.dataset;
+  if (ds.go) { const el = $('day-' + ds.go); window.scrollTo({top: el.offsetTop - 56, behavior: 'smooth'}); }
+  else if (ds.add) openSheet(null, ds.add);
+  else if (ds.edit) openSheet(ds.edit);
+  else if (ds.copy != null) copy(ds.copy);
+  else if (ds.chk) { const c = S.checklist[ds.chk]; setPath('checklist/' + ds.chk, {...c, done: !c.done}); }
+  else if (ds.delchk) setPath('checklist/' + ds.delchk, null);
+  else if (ds.delexp && confirm('이 경비를 삭제할까요?')) setPath('expenses/' + ds.delexp, null);
+});
+
+$('chkForm').addEventListener('submit', e => {
+  e.preventDefault();
+  const t = $('chkText').value.trim(); if (!t) return;
+  setPath('checklist/' + uid(), {t, done:false, o:Date.now()});
+  $('chkText').value = '';
+});
+$('expForm').addEventListener('submit', e => {
+  e.preventDefault();
+  setPath('expenses/' + uid(), {name:$('expName').value.trim(), amt:+$('expAmt').value, cur:$('expCur').value, o:Date.now()});
+  $('expName').value = ''; $('expAmt').value = '';
+});
+$('rate').addEventListener('change', e => { const v = +e.target.value; if (v > 0) setPath('rate', v); });
+
+let notesTimer;
+$('notes').addEventListener('input', e => {
+  clearTimeout(notesTimer);
+  notesTimer = setTimeout(() => setPath('notes', e.target.value), 700);
+});
+$('notes').addEventListener('blur', e => { clearTimeout(notesTimer); if (e.target.value !== (S.notes || '')) setPath('notes', e.target.value); });
+
+/* ---------- 일정 편집 시트 ---------- */
+let editing = null;
+$('fDay').innerHTML = DAYS.map((d, i) => `<option value="${d.d}">Day ${i + 1} · ${d.label}</option>`).join('');
+$('chips').innerHTML = PLACES.map(([k, c]) => `<button type="button" data-k="${k}" data-c="${c}">${k}</button>`).join('');
+$('chips').addEventListener('click', e => {
+  const b = e.target.closest('button'); if (!b) return;
+  $('fTitle').value = b.dataset.k; $('fCn').value = b.dataset.c;
+});
+function openSheet(id, day){
+  editing = id;
+  const it = id ? S.items[id] : {day};
+  $('sheetTitle').textContent = id ? '일정 편집' : '일정 추가';
+  $('chips').style.display = id ? 'none' : '';
+  $('fDel').style.visibility = id ? 'visible' : 'hidden';
+  $('fDay').value = it.day || DAYS[0].d;
+  $('fTime').value = it.time || '';
+  $('fTitle').value = it.title || '';
+  $('fCn').value = it.cn || '';
+  $('fAddr').value = it.addr || '';
+  $('fCost').value = it.cost || '';
+  $('fMemo').value = it.memo || '';
+  $('dim').classList.add('on');
+}
+const closeSheet = () => { $('dim').classList.remove('on'); editing = null; };
+$('fCancel').onclick = closeSheet;
+$('dim').addEventListener('click', e => { if (e.target === $('dim')) closeSheet(); });
+$('fDel').onclick = () => { if (editing && confirm('이 일정을 삭제할까요?')) { setPath('items/' + editing, null); closeSheet(); } };
+$('sheet').addEventListener('submit', e => {
+  e.preventDefault();
+  const prev = editing ? S.items[editing] : {};
+  setPath('items/' + (editing || uid()), {
+    day:$('fDay').value, time:$('fTime').value, title:$('fTitle').value.trim(),
+    cn:$('fCn').value.trim(), addr:$('fAddr').value.trim(), cost:+$('fCost').value || 0,
+    memo:$('fMemo').value.trim(), o: prev.o || Date.now(),
+  });
+  closeSheet();
+});
+
+/* ---------- 유틸 ---------- */
+function copy(text){
+  const done = () => toast('복사했어요 – 고덕지도·디디에 붙여넣기');
+  if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done, () => fallback());
+  else fallback();
+  function fallback(){ const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); done(); } catch { toast(text); } ta.remove(); }
+}
+let toastTimer;
+function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 1800); }
+</script>
+</body>
+</html>
