@@ -299,7 +299,7 @@ const geoTried = new Set(); let geoBusy = false;
 async function backfill(){
   if (geoBusy) return; geoBusy = true;
   for (const [id, it] of Object.entries(S.items)) {
-    if (it.pos || !(it.cn || it.addr) || geoTried.has(id)) continue;
+    if (it.pos || it.nogeo || !(it.cn || it.addr) || geoTried.has(id)) continue;   // nogeo: 체인점 등 지점이 여러 곳
     geoTried.add(id);
     try { const pos = await geocode(it.cn || it.addr); if (pos && S.items[id] && !S.items[id].pos) setPath('items/' + id + '/pos', pos); } catch {}
     await new Promise(r => setTimeout(r, 1100));
