@@ -74,6 +74,11 @@ section.day{margin:6px 0 22px}
 .stat .card{padding:13px 14px}
 .stat small{color:var(--sub);font-size:13px;display:block}
 .stat strong{font-size:20px}
+.conv{padding:4px 14px}
+.convrow{display:flex;align-items:center;gap:10px;padding:10px 0}
+.convrow + .convrow{border-top:1px solid var(--line)}
+.convrow .cur{flex:0 0 64px;color:var(--sub);font-size:14px}
+.convrow input{flex:1;min-width:0;border:0;background:none;font-size:24px;font-weight:600;text-align:right;outline:none}
 h3{font-size:15px;margin:20px 2px 8px;color:var(--sub);font-weight:600}
 textarea.notes{width:100%;min-height:55vh;border:1px solid var(--line);background:var(--card);border-radius:14px;padding:14px;resize:vertical;line-height:1.6}
 .hint{color:var(--sub);font-size:13px;margin:6px 2px}
@@ -135,11 +140,17 @@ textarea.notes{width:100%;min-height:55vh;border:1px solid var(--line);backgroun
   </div>
 
   <div class="panel" id="p-budget">
+    <h3 style="margin-top:4px">💱 환산기</h3>
+    <div class="card conv">
+      <label class="convrow"><span class="cur">¥ 위안</span><input id="cvCny" type="number" inputmode="decimal" step="any" placeholder="0"></label>
+      <label class="convrow"><span class="cur">₩ 원</span><input id="cvKrw" type="number" inputmode="numeric" step="any" placeholder="0"></label>
+    </div>
+    <div class="hint">환율 설정: 1위안 = <input id="rate" type="number" inputmode="decimal" step="any" style="width:76px;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:3px 6px"> 원 <span style="opacity:.8">(같이 쓰는 사람 모두에게 적용)</span></div>
+    <h3>총 예상 경비</h3>
     <div class="stat">
-      <div class="card"><small>총 예상 경비 (위안)</small><strong id="totCny">¥0</strong></div>
+      <div class="card"><small>위안</small><strong id="totCny">¥0</strong></div>
       <div class="card"><small>원화 환산</small><strong id="totKrw">₩0</strong></div>
     </div>
-    <div class="hint">환율: 1위안 = <input id="rate" type="number" style="width:70px;border:1px solid var(--line);background:var(--card);border-radius:8px;padding:3px 6px"> 원</div>
     <h3>일정별 비용</h3>
     <div class="card" id="dayCosts"></div>
     <h3>그 외 경비 (항공·숙소·교통 등)</h3>
@@ -367,7 +378,7 @@ function render(){
           <div class="acts">
             ${it.cn || it.addr ? `<a class="pill map" href="${amap(it.cn || it.addr, it.pos)}" target="_blank" rel="noopener">📍 고덕지도</a>
             <button class="pill" data-copy="${esc(it.addr || it.cn)}">📋 ${it.addr ? '주소' : '중국어'} 복사</button>` : ''}
-            ${+it.cost ? `<span class="cost">💴 ${yuan(+it.cost)}</span>` : ''}
+            ${+it.cost ? `<span class="cost">💴 ${yuan(+it.cost)} · ${won(+it.cost * (+S.rate || 195))}</span>` : ''}
           </div>
         </div>
         <button class="edit" data-edit="${id}">편집</button>
@@ -382,6 +393,7 @@ function render(){
   // 예산
   const rate = +S.rate || 195;
   if (document.activeElement !== $('rate')) $('rate').value = rate;
+  if (document.activeElement !== $('cvKrw') && $('cvCny').value !== '') convert('cny');
   const toCny = e => e.cur === 'KRW' ? (+e.amt || 0) / rate : (+e.amt || 0);
   const dayTotals = DAYS.map(d => Object.values(S.items).filter(it => it.day === d.d).reduce((a, it) => a + (+it.cost || 0), 0));
   const exps = Object.entries(S.expenses || {}).sort((a, b) => (a[1].o || 0) - (b[1].o || 0));
@@ -390,7 +402,7 @@ function render(){
   $('totKrw').textContent = won(total * rate);
   $('dayCosts').innerHTML = DAYS.map((d, i) => `<div class="row"><span class="grow">Day ${i + 1} · ${d.label}</span><span>${yuan(dayTotals[i])}</span></div>`).join('');
   $('expenses').innerHTML = exps.length ? exps.map(([id, e]) => `<div class="row"><span class="grow">${esc(e.name)}</span>
-      <span>${e.cur === 'KRW' ? won(+e.amt) : yuan(+e.amt)}</span><button class="x" data-delexp="${id}" aria-label="삭제">×</button></div>`).join('')
+      <span style="text-align:right">${e.cur === 'KRW' ? won(+e.amt) : yuan(+e.amt)}<br><small style="color:var(--sub)">${e.cur === 'KRW' ? yuan(+e.amt / rate) : won(+e.amt * rate)}</small></span><button class="x" data-delexp="${id}" aria-label="삭제">×</button></div>`).join('')
     : '<div class="row"><span class="grow" style="color:var(--sub)">항공권, 숙소 등을 추가해 보세요</span></div>';
 
   // 준비물
@@ -442,7 +454,21 @@ $('expForm').addEventListener('submit', e => {
   setPath('expenses/' + uid(), {name:$('expName').value.trim(), amt:+$('expAmt').value, cur:$('expCur').value, o:Date.now()});
   $('expName').value = ''; $('expAmt').value = '';
 });
-$('rate').addEventListener('change', e => { const v = +e.target.value; if (v > 0) setPath('rate', v); });
+let rateTimer;
+$('rate').addEventListener('input', e => {
+  const v = +e.target.value; if (!(v > 0)) return;
+  S.rate = v; render(); convert('cny');          // 화면은 바로 반영
+  clearTimeout(rateTimer); rateTimer = setTimeout(() => setPath('rate', v), 800);
+});
+
+/* 환산기: 어느 칸에 입력하든 반대 칸이 바로 바뀜 (저장하지 않음) */
+function convert(from){
+  const rate = +S.rate || 195, c = $('cvCny'), k = $('cvKrw');
+  if (from === 'cny') k.value = c.value === '' ? '' : Math.round(+c.value * rate);
+  else c.value = k.value === '' ? '' : Math.round(+k.value / rate * 100) / 100;
+}
+$('cvCny').addEventListener('input', () => convert('cny'));
+$('cvKrw').addEventListener('input', () => convert('krw'));
 
 let notesTimer;
 $('notes').addEventListener('input', e => {
