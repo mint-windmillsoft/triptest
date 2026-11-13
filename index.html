@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="robots" content="noindex">
 <title>상하이 여행 일정</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
 :root{
   --bg:#f6f4f0; --card:#fff; --ink:#1d1d1f; --sub:#6b6b70; --line:#e6e2da;
@@ -97,6 +98,15 @@ textarea.notes{width:100%;min-height:55vh;border:1px solid var(--line);backgroun
 .gate input{width:100%;text-align:center;font-size:22px;letter-spacing:.3em;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:12px;margin-bottom:10px}
 .gate .err{color:var(--accent);font-size:13px;min-height:18px}
 .gate button{width:100%}
+/* map */
+.daymap{height:230px;border-radius:14px;margin-bottom:8px;overflow:hidden;border:1px solid var(--line);background:var(--chip);z-index:0}
+.pickmap{z-index:0;height:190px;border-radius:10px;overflow:hidden;border:1px solid var(--line);background:var(--chip)}
+.pin{background:var(--accent);color:#fff;border-radius:50%;width:26px!important;height:26px!important;display:grid;place-items:center;
+  font-size:13px;font-weight:700;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.35)}
+.num{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--accent);color:#fff;
+  font-size:12px;font-weight:700;margin-right:6px;vertical-align:1px;border:0;padding:0}
+.field label .find{float:right;border:0;background:none;color:var(--accent);font-size:13px;padding:0}
+.leaflet-container{font:inherit}
 .toast{position:fixed;left:50%;bottom:86px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:99px;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:40}
 .toast.on{opacity:1}
 </style>
@@ -173,6 +183,9 @@ textarea.notes{width:100%;min-height:55vh;border:1px solid var(--line);backgroun
     <div class="field"><label>장소 / 할 일</label><input id="fTitle" placeholder="예: 와이탄 야경" required></div>
     <div class="field"><label>중국어 이름 (고덕지도 검색용)</label><input id="fCn" placeholder="예: 外滩" lang="zh"></div>
     <div class="field"><label>중국어 주소 (선택)</label><input id="fAddr" placeholder="택시 기사에게 보여줄 주소" lang="zh"></div>
+    <div class="field"><label>위치 <button type="button" class="find" id="fFind">🔍 중국어 이름으로 찾기</button></label>
+      <div class="pickmap" id="pickmap"></div>
+      <div class="hint" id="pickHint">지도를 눌러 위치를 직접 지정할 수도 있어요</div></div>
     <div class="field"><label>예상 비용 (위안)</label><input id="fCost" type="number" step="any" placeholder="0"></div>
     <div class="field"><label>메모</label><textarea id="fMemo" placeholder="예약 번호, 가는 법, 먹을 것…"></textarea></div>
     <div class="sheetacts">
@@ -184,6 +197,7 @@ textarea.notes{width:100%;min-height:55vh;border:1px solid var(--line);backgroun
 
 <div class="toast" id="toast"></div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
@@ -220,14 +234,73 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 const won = n => '₩' + Math.round(n).toLocaleString('ko-KR');
 const yuan = n => '¥' + (Math.round(n * 100) / 100).toLocaleString('ko-KR');
-const amap = s => 'https://uri.amap.com/search?keyword=' + encodeURIComponent(s) + '&city=' + encodeURIComponent('上海') + '&callnative=1';
+const amap = (s, pos) => pos
+  ? 'https://uri.amap.com/marker?position=' + pos[1] + ',' + pos[0] + '&name=' + encodeURIComponent(s) + '&callnative=1'
+  : 'https://uri.amap.com/search?keyword=' + encodeURIComponent(s) + '&city=' + encodeURIComponent('上海') + '&callnative=1';
+
+/* ---------- 지도 (고덕지도 타일, GCJ-02 좌표) ---------- */
+function wgs2gcj(lat, lng){
+  const a = 6378245, ee = 0.00669342162296594323, PI = Math.PI, x = lng - 105, y = lat - 35;
+  let dLat = -100 + 2*x + 3*y + 0.2*y*y + 0.1*x*y + 0.2*Math.sqrt(Math.abs(x));
+  dLat += (20*Math.sin(6*x*PI) + 20*Math.sin(2*x*PI)) * 2/3 + (20*Math.sin(y*PI) + 40*Math.sin(y/3*PI)) * 2/3 + (160*Math.sin(y/12*PI) + 320*Math.sin(y*PI/30)) * 2/3;
+  let dLng = 300 + x + 2*y + 0.1*x*x + 0.1*x*y + 0.1*Math.sqrt(Math.abs(x));
+  dLng += (20*Math.sin(6*x*PI) + 20*Math.sin(2*x*PI)) * 2/3 + (20*Math.sin(x*PI) + 40*Math.sin(x/3*PI)) * 2/3 + (150*Math.sin(x/12*PI) + 300*Math.sin(x/30*PI)) * 2/3;
+  const rad = lat / 180 * PI; let m = Math.sin(rad); m = 1 - ee*m*m; const s = Math.sqrt(m);
+  dLat = dLat * 180 / ((a * (1 - ee)) / (m * s) * PI);
+  dLng = dLng * 180 / (a / s * Math.cos(rad) * PI);
+  return [+(lat + dLat).toFixed(6), +(lng + dLng).toFixed(6)];
+}
+async function geocode(q){
+  const u = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&bounded=1&viewbox=120.8,31.9,122.2,30.6&q=' + encodeURIComponent(q);
+  const j = await (await fetch(u)).json();
+  return j[0] ? wgs2gcj(+j[0].lat, +j[0].lon) : null;
+}
+const SHANGHAI = [31.2304, 121.4737];
+const tiles = () => L.tileLayer('https://webrd0{s}.is.autonavi.com/appmaptile?lang=zh_cn&size=1&scale=1&style=8&x={x}&y={y}&z={z}',
+  {subdomains:'1234', maxZoom:18, attribution:'© 高德地图'});
+const pinIcon = n => L.divIcon({className:'pin', html:String(n), iconSize:[26, 26]});
+
+const dayMaps = {};   // day -> {sig, el, map, markers}
+function drawMaps(){
+  if (!window.L) return;
+  DAYS.forEach(d => {
+    const slot = $('map-' + d.d), pts = dayPts(d.d);
+    const sig = JSON.stringify(pts.map(p => [p.it.pos, p.it.title]));
+    const old = dayMaps[d.d];
+    if (!slot) { if (old) { old.map.remove(); delete dayMaps[d.d]; } return; }
+    if (old && old.sig === sig) { slot.replaceWith(old.el); old.map.invalidateSize(); return; }   // 바뀐 게 없으면 확대 상태 유지
+    if (old) old.map.remove();
+    const map = L.map(slot, {zoomControl:false, scrollWheelZoom:false});
+    tiles().addTo(map);
+    const markers = {};
+    pts.forEach(p => { markers[p.id] = L.marker(p.it.pos, {icon:pinIcon(p.n)}).addTo(map).bindPopup(esc(p.it.title)); });
+    if (pts.length > 1) L.polyline(pts.map(p => p.it.pos), {color:'#d6453d', weight:3, opacity:.7, dashArray:'6 6'}).addTo(map);
+    map.fitBounds(L.latLngBounds(pts.map(p => p.it.pos)).pad(.25), {maxZoom:15});
+    dayMaps[d.d] = {sig, el:slot, map, markers};
+  });
+}
+function dayPts(day){
+  return sorted(S.items).filter(([, it]) => it.day === day && Array.isArray(it.pos)).map(([id, it], i) => ({id, it, n:i + 1}));
+}
+
+/* 위치가 없는 장소는 자동으로 찾아서 저장 (1초에 1건) */
+const geoTried = new Set(); let geoBusy = false;
+async function backfill(){
+  if (geoBusy) return; geoBusy = true;
+  for (const [id, it] of Object.entries(S.items)) {
+    if (it.pos || !(it.cn || it.addr) || geoTried.has(id)) continue;
+    geoTried.add(id);
+    try { const pos = await geocode(it.cn || it.addr); if (pos && S.items[id] && !S.items[id].pos) setPath('items/' + id + '/pos', pos); } catch {}
+    await new Promise(r => setTimeout(r, 1100));
+  }
+  geoBusy = false;
+}
 
 let S = {items:{}, expenses:{}, checklist:{}, notes:'', rate:195};
 let db = null;
 
 /* ---------- 암호 ---------- */
 function unlock(){ $('gate').remove(); start(); }
-try { if (localStorage.getItem(AUTH_KEY) === PASS_HASH) unlock(); } catch {}
 $('gateForm')?.addEventListener('submit', e => {
   e.preventDefault();
   if (hash($('gateInput').value.trim()) === PASS_HASH) {
@@ -242,9 +315,9 @@ function saveCache(){ try { localStorage.setItem(CACHE_KEY, JSON.stringify(S)); 
 
 function setPath(path, val){            // path: 'items/abc' 등
   if (db) { db.ref('trip/' + path).set(val ?? null).catch(() => toast('저장 실패 – 연결을 확인하세요')); return; }
-  const [k, id] = path.split('/');
-  if (id) { S[k] = {...(S[k] || {})}; if (val == null) delete S[k][id]; else S[k][id] = val; }
-  else S[k] = val;
+  const keys = path.split('/'), last = keys.pop();
+  let o = S; for (const k of keys) o = (o[k] = {...(o[k] || {})});
+  if (val == null) delete o[last]; else o[last] = val;
   saveCache(); render();
 }
 
@@ -280,17 +353,19 @@ function render(){
   $('days').innerHTML = DAYS.map((d, i) => {
     const items = sorted(S.items).filter(([, it]) => it.day === d.d);
     const sum = items.reduce((a, [, it]) => a + (+it.cost || 0), 0);
+    const nums = Object.fromEntries(dayPts(d.d).map(p => [p.id, p.n]));
     return `<section class="day" id="day-${d.d}">
       <div class="dayhead"><h2>Day ${i + 1} <span style="font-weight:400;color:var(--sub);font-size:15px">${d.label}</span></h2>${sum ? `<small>${yuan(sum)}</small>` : ''}</div>
+      ${Object.keys(nums).length && window.L ? `<div class="daymap" id="map-${d.d}"></div>` : ''}
       ${items.length ? '' : '<div class="empty">아직 일정이 없어요</div>'}
       ${items.map(([id, it]) => `<div class="card item">
         <div class="time">${esc(it.time || '–')}</div>
         <div class="body">
-          <div class="title">${esc(it.title)}</div>
+          <div class="title">${nums[id] ? `<button class="num" data-focus="${id}" data-day="${d.d}" aria-label="지도에서 보기">${nums[id]}</button>` : ''}${esc(it.title)}</div>
           ${it.cn || it.addr ? `<div class="cn" lang="zh">${esc([it.cn, it.addr].filter(Boolean).join(' · '))}</div>` : ''}
           ${it.memo ? `<div class="memo">${esc(it.memo)}</div>` : ''}
           <div class="acts">
-            ${it.cn || it.addr ? `<a class="pill map" href="${amap(it.cn || it.addr)}" target="_blank" rel="noopener">📍 고덕지도</a>
+            ${it.cn || it.addr ? `<a class="pill map" href="${amap(it.cn || it.addr, it.pos)}" target="_blank" rel="noopener">📍 고덕지도</a>
             <button class="pill" data-copy="${esc(it.addr || it.cn)}">📋 ${it.addr ? '주소' : '중국어'} 복사</button>` : ''}
             ${+it.cost ? `<span class="cost">💴 ${yuan(+it.cost)}</span>` : ''}
           </div>
@@ -300,6 +375,9 @@ function render(){
       <button class="add" data-add="${d.d}">＋ 일정 추가</button>
     </section>`;
   }).join('');
+
+  drawMaps();
+  backfill();
 
   // 예산
   const rate = +S.rate || 195;
@@ -336,10 +414,15 @@ $('tabs').addEventListener('click', e => {
 });
 
 document.addEventListener('click', e => {
-  const t = e.target.closest('[data-go],[data-add],[data-edit],[data-copy],[data-chk],[data-delchk],[data-delexp]');
+  const t = e.target.closest('[data-go],[data-add],[data-edit],[data-copy],[data-chk],[data-delchk],[data-delexp],[data-focus]');
   if (!t) return;
   const ds = t.dataset;
-  if (ds.go) { const el = $('day-' + ds.go); window.scrollTo({top: el.offsetTop - 56, behavior: 'smooth'}); }
+  if (ds.focus) {
+    const dm = dayMaps[ds.day], mk = dm?.markers[ds.focus]; if (!mk) return;
+    dm.el.scrollIntoView({behavior:'smooth', block:'center'});
+    dm.map.setView(mk.getLatLng(), 16); mk.openPopup();
+  }
+  else if (ds.go) { const el = $('day-' + ds.go); window.scrollTo({top: el.offsetTop - 56, behavior: 'smooth'}); }
   else if (ds.add) openSheet(null, ds.add);
   else if (ds.edit) openSheet(ds.edit);
   else if (ds.copy != null) copy(ds.copy);
@@ -390,17 +473,49 @@ function openSheet(id, day){
   $('fCost').value = it.cost || '';
   $('fMemo').value = it.memo || '';
   $('dim').classList.add('on');
+  setPick(it.pos || null);
 }
 const closeSheet = () => { $('dim').classList.remove('on'); editing = null; };
+
+/* 편집 시트 안의 위치 지정 지도 */
+let pickPos = null, pickMap = null, pickMarker = null;
+function setPick(pos, zoom){
+  pickPos = pos;
+  $('pickHint').textContent = pos ? '📍 위치 지정됨 – 지도를 눌러 옮길 수 있어요' : '지도를 눌러 위치를 직접 지정할 수도 있어요';
+  if (!window.L) { $('pickmap').style.display = 'none'; return; }
+  if (!pickMap) {
+    pickMap = L.map('pickmap', {zoomControl:false, scrollWheelZoom:false});
+    tiles().addTo(pickMap);
+    pickMap.on('click', e => setPick([+e.latlng.lat.toFixed(6), +e.latlng.lng.toFixed(6)], pickMap.getZoom()));
+  }
+  pickMap.invalidateSize();
+  if (pickMarker) { pickMarker.remove(); pickMarker = null; }
+  if (pos) { pickMarker = L.marker(pos, {icon:pinIcon('📍')}).addTo(pickMap); pickMap.setView(pos, zoom || 15); }
+  else pickMap.setView(SHANGHAI, 11);
+}
+$('fFind').onclick = async () => {
+  const q = $('fCn').value.trim() || $('fAddr').value.trim() || $('fTitle').value.trim();
+  if (!q) { toast('중국어 이름을 먼저 입력하세요'); return; }
+  $('fFind').textContent = '찾는 중…';
+  try { const pos = await geocode(q); pos ? setPick(pos) : toast('못 찾았어요 – 지도를 눌러 지정해 주세요'); }
+  catch { toast('검색 실패 – 지도를 눌러 지정해 주세요'); }
+  $('fFind').textContent = '🔍 중국어 이름으로 찾기';
+};
 $('fCancel').onclick = closeSheet;
 $('dim').addEventListener('click', e => { if (e.target === $('dim')) closeSheet(); });
 $('fDel').onclick = () => { if (editing && confirm('이 일정을 삭제할까요?')) { setPath('items/' + editing, null); closeSheet(); } };
 $('sheet').addEventListener('submit', e => {
   e.preventDefault();
   const prev = editing ? S.items[editing] : {};
-  setPath('items/' + (editing || uid()), {
+  const cn = $('fCn').value.trim(), addr = $('fAddr').value.trim();
+  // 이름·주소를 바꿨는데 위치를 직접 안 건드렸으면 위치를 다시 찾도록 비움
+  const placeChanged = editing && (cn !== (prev.cn || '') || addr !== (prev.addr || ''));
+  const pos = placeChanged && pickPos === prev.pos ? null : pickPos;
+  const id = editing || uid();
+  geoTried.delete(id);
+  setPath('items/' + id, {
     day:$('fDay').value, time:$('fTime').value, title:$('fTitle').value.trim(),
-    cn:$('fCn').value.trim(), addr:$('fAddr').value.trim(), cost:+$('fCost').value || 0,
+    cn, addr, cost:+$('fCost').value || 0, pos,
     memo:$('fMemo').value.trim(), o: prev.o || Date.now(),
   });
   closeSheet();
@@ -416,6 +531,9 @@ function copy(text){
 }
 let toastTimer;
 function toast(msg){ const t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 1800); }
+
+/* 모든 정의가 끝난 뒤에 자동 입장 */
+try { if (localStorage.getItem(AUTH_KEY) === PASS_HASH) unlock(); } catch {}
 </script>
 </body>
 </html>
