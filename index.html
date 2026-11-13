@@ -542,6 +542,7 @@ $('sheet').addEventListener('submit', e => {
   setPath('items/' + id, {
     day:$('fDay').value, time:$('fTime').value, title:$('fTitle').value.trim(),
     cn, addr, cost:+$('fCost').value || 0, pos,
+    nogeo: prev.nogeo && !placeChanged ? true : null,   // 이름을 바꾸면(특정 지점 입력) 다시 자동으로 찾음
     memo:$('fMemo').value.trim(), o: prev.o || Date.now(),
   });
   closeSheet();
